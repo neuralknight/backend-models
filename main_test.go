@@ -1,19 +1,90 @@
 package models_test
 
 import (
+	"bytes"
+	"encoding/json"
+	"io/ioutil"
 	"math"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 
+	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/leanovate/gopter"
 	"github.com/leanovate/gopter/gen"
 	"github.com/leanovate/gopter/prop"
+	"github.com/neuralknight/backend-models"
+	"github.com/neuralknight/backend-views"
+	"github.com/satori/go.uuid"
+	log "github.com/sirupsen/logrus"
 	. "gopkg.in/check.v1"
 )
 
+func (s BoardSuite) makeURLString(input string) string {
+	srvURL, err := url.Parse(s.srv.URL)
+	if err != nil {
+		log.Panicln(err)
+	}
+	uriURL, err := url.Parse(input)
+	if err != nil {
+		log.Panicln(err)
+	}
+	uriURL = srvURL.ResolveReference(uriURL)
+	return uriURL.String()
+}
+
+func (s *BoardSuite) generateGame(c *C) uuid.UUID {
+	res, err := s.client.Post(s.makeURLString("api/v1.0/games"), "text/json; charset=utf-8", nil)
+	c.Assert(err, Not(NotNil))
+	defer res.Body.Close()
+	c.Assert(res.StatusCode, Equals, 201)
+	c.Assert(res.Header.Get("Content-Type"), Equals, "text/json; charset=utf-8")
+	buffer, err := ioutil.ReadAll(res.Body)
+	c.Assert(err, Not(NotNil))
+	var message models.BoardCreatedMessage
+	err = json.Unmarshal(buffer, &message)
+	c.Assert(err, Not(NotNil))
+	c.Assert(len(message.ID.Bytes()), Not(Equals), 0)
+	c.Assert(message.ID.Version(), Equals, uuid.V5)
+	return message.ID
+}
+
+func (s *BoardSuite) addAgent(c *C, gameID uuid.UUID) uuid.UUID {
+	var message models.AgentCreateMessage
+	message.User = true
+	gameURL, err := url.Parse(s.makeURLString("api/v1.0/games/" + gameID.String()))
+	c.Assert(err, Not(NotNil))
+	message.GameURL = *gameURL
+	buffer, err := json.Marshal(message)
+	c.Assert(err, Not(NotNil))
+	res, err := s.client.Post(s.makeURLString("api/v1.0/agents"), "text/json; charset=utf-8", bytes.NewReader(buffer))
+	c.Assert(err, Not(NotNil))
+	c.Assert(res.StatusCode, Equals, 201)
+	buffer, err = ioutil.ReadAll(res.Body)
+	c.Assert(err, Not(NotNil))
+	var messageCreated models.AgentCreatedMessage
+	err = json.Unmarshal(buffer, &messageCreated)
+	c.Assert(err, Not(NotNil))
+	return messageCreated.ID
+}
+
+func (s *BoardSuite) TestServeHTTPPostAgents(c *C) {
+	gameID := s.generateGame(c)
+	agent1ID := s.addAgent(c, gameID)
+	c.Assert(agent1ID.Version(), Equals, uuid.V5)
+	agent2ID := s.addAgent(c, gameID)
+	c.Assert(agent2ID.Version(), Equals, uuid.V5)
+}
+
 func Test(t *testing.T) { TestingT(t) }
 
-type BoardSuite struct{}
+type BoardSuite struct {
+	srv      *httptest.Server
+	client   *http.Client
+	endpoint string
+}
 
 var _ = Suite(&BoardSuite{})
 
@@ -36,6 +107,25 @@ func TestBoard(t *testing.T) {
 	))
 
 	properties.TestingRun(t)
+}
+
+func (s *BoardSuite) SetUpSuite(c *C) {
+	s.srv = httptest.NewServer(views.Handler{})
+	s.client = s.srv.Client()
+	s.endpoint = s.srv.URL
+}
+
+func (s *BoardSuite) SetUpTest(c *C) {}
+
+func (s *BoardSuite) TearDownTest(c *C) {
+	db, _ := gorm.Open("sqlite3", "chess.db")
+	db = db.Begin()
+	defer db.Commit()
+	db.DropTableIfExists("board_models", "agent_models")
+}
+
+func (s *BoardSuite) TearDownSuite(c *C) {
+	s.srv.Close()
 }
 
 // from collections import deque
