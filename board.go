@@ -1,7 +1,9 @@
 package models
 
 import (
+	"bytes"
 	"encoding/json"
+	"net/http"
 	"net/url"
 
 	"github.com/jinzhu/gorm"
@@ -12,6 +14,7 @@ import (
 // GameJoinMessage board
 type GameJoinMessage struct {
 	AgentURL url.URL
+	ID       uuid.UUID
 }
 
 func openDB() *gorm.DB {
@@ -118,7 +121,7 @@ func GetGame(ID uuid.UUID) Board {
 	if !rows.Next() {
 		log.Panicln(rows)
 	}
-	err = rows.Scan(&game.ID, &game.CreatedAt, &game.UpdatedAt, &game.DeletedAt, &game.State, &game.MoveCount, &game.MovesSincePawn)
+	err = rows.Scan(&game.ID, &game.CreatedAt, &game.UpdatedAt, &game.DeletedAt, &game.State, &game.MoveCount, &game.MovesSincePawn, &game.Player1, &game.Player2)
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -128,7 +131,7 @@ func GetGame(ID uuid.UUID) Board {
 	if game.ID.Version() != uuid.V5 {
 		panic(game)
 	}
-	return game
+	return &game
 }
 
 // GetGames game.
@@ -144,7 +147,7 @@ func GetGames(decoder *json.Decoder) BoardStatesMessage {
 	games := make([]uuid.UUID, 0)
 	for rows.Next() {
 		var game boardModel
-		err := rows.Scan(&game.ID, &game.CreatedAt, &game.UpdatedAt, &game.DeletedAt, &game.State, &game.MoveCount, &game.MovesSincePawn)
+		err := rows.Scan(&game.ID, &game.CreatedAt, &game.UpdatedAt, &game.DeletedAt, &game.State, &game.MoveCount, &game.MovesSincePawn, &game.Player1, &game.Player2)
 		if err != nil {
 			log.Panicln("Failed to scan row", err)
 		}
@@ -156,9 +159,52 @@ func GetGames(decoder *json.Decoder) BoardStatesMessage {
 	return BoardStatesMessage{games}
 }
 
-// AddPlayer game.
-func (board boardModel) AddPlayer(decoder *json.Decoder) BoardStateMessage {
-	return BoardStateMessage{}
+// AddPlayer to board.
+func (board *boardModel) AddPlayer(decoder *json.Decoder) BoardStateMessage {
+	if board.Player2.Version() == uuid.V5 {
+		log.Panicln("Game is full.")
+	}
+	var message GameJoinMessage
+	err := decoder.Decode(&message)
+	if err != nil {
+		log.Panicln(err)
+	}
+	if message.ID.Version() != uuid.V5 {
+		log.Panicln("Invalid agent ID")
+	}
+	if board.Player1.Version() != uuid.V5 {
+		board.Player1 = message.ID
+	} else {
+		board.Player2 = message.ID
+		// Player 2 joins game.
+		board.pokePlayer(board.Player1)
+	}
+	return BoardStateMessage{Active: board.active(), State: board.State}
+}
+
+// Inform active player of game state.
+func (board boardModel) pokePlayer(player uuid.UUID) {
+	data, err := json.Marshal(BoardStateMessage{Active: board.active(), State: board.State})
+	if err != nil {
+		log.Panicln(err)
+	}
+	req, err := http.NewRequest(http.MethodPut, "", bytes.NewReader(data))
+	if err != nil {
+		log.Panicln(err)
+	}
+	defer req.Body.Close()
+	var client http.Client
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Panicln(err)
+	}
+	defer resp.Body.Close()
+	var message BoardStateMessage
+	err = json.NewDecoder(resp.Body).Decode(&message)
+	if err != nil {
+		log.Panicln(err)
+	}
+	// self.request("PUT", f"/agent/{ active_player or self.active_player() }", json={"end": end})
 }
 
 // GetInfo game.
@@ -184,9 +230,6 @@ func (board boardModel) PlayRound(decoder *json.Decoder) BoardStateMessage {
 // class BlankBoard:
 //     def __str__(self):
 //         return "\n" * 8
-//
-//     def add_player_v1(self, *args, **kwargs):
-//         return {}
 //
 //     def close(self, *args, **kwargs):
 //         return {"end": True}
@@ -252,18 +295,6 @@ func (board boardModel) PlayRound(decoder *json.Decoder) BoardStateMessage {
 //         return state
 //     state["state"] = tuple(map(methodcaller("hex"), state["state"]))
 //     return state
-//
-//
-// @game_interaction.post()
-// def join_game(request):
-//     """
-//     Add player to board.
-//     """
-//     try:
-//         user_id = request.json["id"]
-//     except KeyError:
-//         raise HTTPBadRequest
-//     return get_game(request).add_player_v1(request.dbsession, user_id)
 //
 //
 // @game_interaction.put()
@@ -342,32 +373,6 @@ func (board boardModel) PlayRound(decoder *json.Decoder) BoardStateMessage {
 //             count(),
 //             self.board if self._active_player else reversed(
 //                 [reversed(row) for row in self.board])))
-//
-//     def add_player_v1(self, dbsession, player):
-//         """
-//         Player 2 joins game.
-//         """
-//         assert player
-//         if self.player1:
-//             self.player2 = player
-//             table_game = TableGame(
-//                 game=self.id,
-//                 player_one=self.player1,
-//                 player_two=self.player2,
-//                 one_won=True,
-//                 two_won=True)
-//             table_board = TableBoard(
-//                 board_state=dumps(tuple(map(tuple, self.board))),
-//                 move_num=self._board.move_count,
-//                 player=self.active_player(),
-//                 game=self.id)
-//             table_board.game_link.append(table_game)
-//             dbsession.add(table_game)
-//             dbsession.add(table_board)
-//             self.poke_player(False)
-//             return {}
-//         self.player1 = player
-//         return {}
 //
 //     def slice_cursor_v1(self, cursor=None, lookahead=1, complete=False):
 //         """

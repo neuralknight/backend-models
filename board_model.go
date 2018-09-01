@@ -10,8 +10,8 @@ import (
 
 // BoardStateMessage models.
 type BoardStateMessage struct {
-	End, Invalid bool
-	State        board
+	Active, Valid bool
+	State         board
 }
 
 // BoardStatesMessage models.
@@ -36,6 +36,10 @@ type BoardStatesMessage struct{ Games []uuid.UUID }
 
 // InvalidMove error.
 type InvalidMove struct{}
+
+func (err InvalidMove) Error() string {
+	return "Invalid move."
+}
 
 type cursorDelegate struct{}
 
@@ -334,6 +338,8 @@ type boardModel struct {
 	State          board      `gorm:"type:varchar;size:136;not null"`
 	MoveCount      int
 	MovesSincePawn int
+	Player1        uuid.UUID
+	Player2        uuid.UUID
 }
 
 // Ensure active player king on board.
