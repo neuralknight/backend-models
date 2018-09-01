@@ -70,6 +70,35 @@ func (s *BoardSuite) addAgent(c *C, gameID uuid.UUID) uuid.UUID {
 	return messageCreated.ID
 }
 
+func (s *BoardSuite) TestServeHTTPGetGames(c *C) {
+	res, err := s.client.Get(s.makeURLString("api/v1.0/games"))
+	c.Assert(err, Not(NotNil))
+	defer res.Body.Close()
+	c.Assert(res.StatusCode, Equals, 200)
+	c.Assert(res.Header.Get("Content-Type"), Equals, "text/json; charset=utf-8")
+	buffer, err := ioutil.ReadAll(res.Body)
+	c.Assert(err, Not(NotNil))
+	var message models.BoardStatesMessage
+	err = json.Unmarshal(buffer, &message)
+	c.Assert(err, Not(NotNil))
+	c.Assert(len(message.Games), Equals, 0)
+}
+
+func (s *BoardSuite) TestServeHTTPPostGames(c *C) {
+	ID := s.generateGame(c)
+	res, err := s.client.Get(s.makeURLString("api/v1.0/games/" + ID.String()))
+	c.Assert(err, Not(NotNil))
+	defer res.Body.Close()
+	c.Assert(res.StatusCode, Equals, 200)
+	c.Assert(res.Header.Get("Content-Type"), Equals, "text/json; charset=utf-8")
+	buffer, err := ioutil.ReadAll(res.Body)
+	c.Assert(err, Not(NotNil))
+	var response models.BoardStateMessage
+	err = json.Unmarshal(buffer, &response)
+	c.Assert(err, Not(NotNil))
+	log.Println(response)
+}
+
 func (s *BoardSuite) TestServeHTTPPostAgents(c *C) {
 	gameID := s.generateGame(c)
 	agent1ID := s.addAgent(c, gameID)
