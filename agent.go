@@ -192,7 +192,7 @@ func (agent agentModel) playRound() BoardStateMessage {
 		log.Panicln("No agent found to play game: ", agent.Delegate)
 	}
 	message := agent.putBoard(delegate.playRound(agent.getBoardsCursor()))
-	if message.Active && !message.Valid {
+	if !message.End && message.Invalid {
 		return agent.playRound()
 	}
 	return message

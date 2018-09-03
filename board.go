@@ -160,6 +160,11 @@ func GetGames(decoder *json.Decoder) BoardStatesMessage {
 }
 
 // AddPlayer to board.
+func (board boardModel) stateMessage() BoardStateMessage {
+	return BoardStateMessage{End: !board.active(), State: board.State}
+}
+
+// AddPlayer to board.
 func (board *boardModel) AddPlayer(decoder *json.Decoder) BoardStateMessage {
 	if board.Player2.Version() == uuid.V5 {
 		log.Panicln("Game is full.")
@@ -179,12 +184,12 @@ func (board *boardModel) AddPlayer(decoder *json.Decoder) BoardStateMessage {
 		// Player 2 joins game.
 		board.pokePlayer(board.Player1)
 	}
-	return BoardStateMessage{Active: board.active(), State: board.State}
+	return board.stateMessage()
 }
 
 // Inform active player of game state.
 func (board boardModel) pokePlayer(player uuid.UUID) {
-	data, err := json.Marshal(BoardStateMessage{Active: board.active(), State: board.State})
+	data, err := json.Marshal(board.stateMessage())
 	if err != nil {
 		log.Panicln(err)
 	}

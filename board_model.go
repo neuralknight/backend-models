@@ -10,8 +10,8 @@ import (
 
 // BoardStateMessage models.
 type BoardStateMessage struct {
-	Active, Valid bool
-	State         board
+	End, Invalid bool
+	State        board
 }
 
 // BoardStatesMessage models.

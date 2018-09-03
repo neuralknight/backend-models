@@ -669,7 +669,7 @@ func getMove(decoder *json.Decoder) [2][2]int {
 func (userAgentDelegate) playRound(decoder *json.Decoder, agent agentModel, db *gorm.DB) BoardStateMessage {
 	move := getMove(decoder)
 	proposal := agent.GetState(decoder)
-	if !proposal.Active {
+	if proposal.End {
 		return proposal
 	}
 	out := proposal.State
