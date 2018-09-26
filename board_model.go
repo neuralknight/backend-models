@@ -37,6 +37,10 @@ type BoardStatesMessage struct{ Games []uuid.UUID }
 // InvalidMove error.
 type InvalidMove struct{}
 
+func (err InvalidMove) Error() string {
+	return "Invalid move."
+}
+
 type cursorDelegate struct{}
 
 // class CursorDelegate:
@@ -334,6 +338,8 @@ type boardModel struct {
 	State          board      `gorm:"type:varchar;size:136;not null"`
 	MoveCount      int
 	MovesSincePawn int
+	Player1        uuid.UUID
+	Player2        uuid.UUID
 }
 
 // Ensure active player king on board.

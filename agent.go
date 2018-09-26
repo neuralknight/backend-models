@@ -94,7 +94,7 @@ func GetAgent(ID uuid.UUID) Agent {
 	if !rows.Next() {
 		log.Panicln(ID)
 	}
-	err = rows.Scan(&agent.ID)
+	err = rows.Scan(&agent.ID, &agent.CreatedAt, &agent.UpdatedAt, &agent.DeletedAt, &agent.GameURL, &agent.Delegate, &agent.Lookahead)
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -159,7 +159,7 @@ func (agent agentModel) GetState(decoder *json.Decoder) BoardStateMessage {
 }
 
 func (agent agentModel) joinGame() {
-	buffer, err := json.Marshal(GameJoinMessage{})
+	buffer, err := json.Marshal(GameJoinMessage{ID: agent.ID})
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -192,7 +192,7 @@ func (agent agentModel) playRound() BoardStateMessage {
 		log.Panicln("No agent found to play game: ", agent.Delegate)
 	}
 	message := agent.putBoard(delegate.playRound(agent.getBoardsCursor()))
-	if message.Invalid && !message.End {
+	if !message.End && message.Invalid {
 		return agent.playRound()
 	}
 	return message

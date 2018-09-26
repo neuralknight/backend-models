@@ -115,12 +115,6 @@ package models
 //     def lookahead_boards(self, n=4):
 //         return self._board.lookahead_boards(n)
 //
-//     def poke_player(self, end, active_player=None):
-//         """
-//         Inform active player of game state.
-//         """
-//         self.request("PUT", f"/agent/{ active_player or self.active_player() }", json={"end": end})
-//
 //     def update(self, state):
 //         """
 //         Validate and return new board state.
