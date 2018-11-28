@@ -1,7 +1,7 @@
 module github.com/neuralknight/backend-models
 
 require (
-	github.com/jinzhu/gorm v1.9.1
+	github.com/jinzhu/gorm v1.9.2
 	github.com/leanovate/gopter v0.2.3
 	github.com/neuralknight/backend-views v0.0.0-20181025052249-fc8979d1f5f5
 	github.com/satori/go.uuid v1.2.0
