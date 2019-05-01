@@ -3,7 +3,7 @@ module github.com/neuralknight/backend-models
 require (
 	github.com/denisenkom/go-mssqldb v0.0.0-20190121005146-b04fd42d9952 // indirect
 	github.com/gofrs/uuid v3.2.0+incompatible // indirect
-	github.com/jinzhu/gorm v1.9.2
+	github.com/jinzhu/gorm v1.9.5
 	github.com/leanovate/gopter v0.2.4
 	github.com/mattn/go-sqlite3 v1.10.0 // indirect
 	github.com/neuralknight/backend-views v0.0.0-20190112161726-b5f89d54f3a7
