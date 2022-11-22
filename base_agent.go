@@ -198,10 +198,12 @@ func (agent weightAgent) sequenceGrouper(root board, sequences [][]board, valueM
 // Determine value for each board state in array of board states
 //
 // Inputs:
-//     boards: Array of board states
+//
+//	boards: Array of board states
 //
 // Outputs:
-//     best_state: The highest valued board state in the array
+//
+//	best_state: The highest valued board state in the array
 func (agent weightAgent) evaluateBoards(boards <-chan board) <-chan scoredBoard {
 	// Pair encoded pieces to values
 	valueMap := make(map[string]pieceValues)
