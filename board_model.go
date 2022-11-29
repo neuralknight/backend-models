@@ -371,7 +371,7 @@ type mutation struct {
 	nextPiece uint8
 }
 
-func (board boardModel) validateMutation(mutation []mutation, state board) board {
+func (board *boardModel) validateMutation(mutation []mutation, state board) board {
 	if len(mutation) != 2 {
 		log.Panicln(InvalidMove{})
 	}
@@ -418,7 +418,7 @@ func (board boardModel) validateMutation(mutation []mutation, state board) board
 }
 
 // Validate and return new board state.
-func (board boardModel) update(state board) boardModel {
+func (board *boardModel) update(state board) boardModel {
 	m := make([]mutation, 0)
 	for posY, r := range board.State {
 		for posX, piece := range r {
