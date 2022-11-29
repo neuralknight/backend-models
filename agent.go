@@ -118,16 +118,16 @@ func (agent agentModel) getBoards(cursor uuid.UUID) cursorMessage {
 }
 
 type cursorMessage struct {
-	cursor uuid.UUID
-	boards []board
+	Cursor uuid.UUID
+	Boards []board
 }
 
 func (agent agentModel) getBoardsCursorOne(boards chan<- board, cursor uuid.UUID) uuid.UUID {
 	message := agent.getBoards(cursor)
-	for _, b := range message.boards {
+	for _, b := range message.Boards {
 		boards <- b
 	}
-	return message.cursor
+	return message.Cursor
 }
 
 // getBoardsCursor agent.
